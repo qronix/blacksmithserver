@@ -9,6 +9,6 @@ admin.initializeApp({
     databaseURL: "https://blacksmith-ed73e.firebaseio.com"
 });
 
-module.exports{
+module.exports={
     admin,
 }
