@@ -6,11 +6,15 @@ const { validateEmail } = require('../utils/validate');
 
 
 let userSchema = new Schema({
-    username:{
+    email:{
         type: String,
         required: true,
         unique: true,
         minlength: 5,
+        validate:{
+            validator:v=>{ validateEmail(v) },
+            message: props => `${props.value} is not a valid email`
+        }
     },
     uid:{
         type: String,
@@ -33,3 +37,7 @@ let userSchema = new Schema({
 });
 
 const user = mongoose.model('User', userSchema);
+
+module.exports = {
+    user
+}

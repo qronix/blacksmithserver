@@ -3,6 +3,8 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const bodyParser = require('body-parser');
 const { admin } = require('./firebase/firebase');
+const { db } = require('./db/db');
+const { user } = require('./db/user.model');
 
 //parse application/x-www-form-urlendcoded
 app.use(bodyParser.urlencoded({ extended:false }));
@@ -18,8 +20,23 @@ app.post('/register', async (req, res)=>{
     const {email, password} = req.body;
     try{
         const response = await admin.auth().createUser({ email, password });
+        const { uid } = response;
+        console.log('Got UID: ', uid);
         if(response.uid){
-            console.log('User was created');
+            try{
+                const account = new user({email, uid});
+                console.log('account: ', account);
+                const status = await account.save((err, account)=>{
+                    if(err){
+                        console.log('Got an error: ', err.message);
+                    }else{
+                        console.log('Account: ', account);
+                    }
+                });
+                console.log('Got db status: ', status);
+            }catch(err){
+                throw new Error(err.message);
+            }
         }
     }catch(err){
         if(err.code){
