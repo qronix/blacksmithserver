@@ -21,21 +21,15 @@ app.post('/register', async (req, res)=>{
     try{
         const response = await admin.auth().createUser({ email, password });
         const { uid } = response;
-        console.log('Got UID: ', uid);
         if(response.uid){
             try{
                 const account = new user({email, uid});
-                console.log('account: ', account);
-                const status = await account.save((err, account)=>{
-                    if(err){
-                        console.log('Got an error: ', err.message);
-                    }else{
-                        console.log('Account: ', account);
-                    }
-                });
-                console.log('Got db status: ', status);
+                const status = await account.save();
+                if(status){
+                    res.status(200).send('User created');
+                }
             }catch(err){
-                throw new Error(err.message);
+                res.status(500).send('Could not create user');
             }
         }
     }catch(err){
@@ -56,6 +50,10 @@ app.post('/register', async (req, res)=>{
         }
     }
 });
+
+// app.post('/loginWithCreds', async(req, res) => {
+//     admin.auth()
+// });
 
 io.on('connection', ( socket ) => {
     console.log('We have a connection!');
