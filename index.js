@@ -4,7 +4,7 @@ const io = require('socket.io')(http);
 const bodyParser = require('body-parser');
 const { admin } = require('./firebase/firebase');
 const { db } = require('./db/db');
-const { user } = require('./db/user.model');
+const { User } = require('./db/user.model');
 
 //parse application/x-www-form-urlendcoded
 app.use(bodyParser.urlencoded({ extended:false }));
@@ -23,37 +23,50 @@ app.post('/register', async (req, res)=>{
         const { uid } = response;
         if(response.uid){
             try{
-                const account = new user({email, uid});
+                const account = new User({email, uid});
                 const status = await account.save();
                 if(status){
-                    res.status(200).send('User created');
+                    return res.status(200).send('User created.');
                 }
             }catch(err){
-                res.status(500).send('Could not create user');
+                return res.status(500).send('Could not create user.');
             }
         }
     }catch(err){
         if(err.code){
             switch(err.code){
                 case 'auth/email-already-exists':
-                    res.status(400).send('Email already in use');
-                    break;
+                    return res.status(400).send('Email already in use.');
                 case 'auth/invalid-password':
-                    res.status(400).send('Invalid password format');
-                    break;
+                    return res.status(400).send('Invalid password format.');
                 default:
-                    res.status(500).send('An unspecified error occurred');
-                    break;
+                    return res.status(500).send('An unspecified error occurred.');
             }
         }else{
-            res.status(500).send('An unknown error occurred');
+            return res.status(500).send('An unknown error occurred.');
         }
     }
 });
 
-// app.post('/loginWithCreds', async(req, res) => {
-//     admin.auth()
-// });
+app.post('/loginWithCreds', async(req, res) => {
+    const { TOKEN } = req.body;
+    try{
+        const response = await admin.auth().verifyIdToken(TOKEN);
+        if(response.uid){
+            const userProfile = await User.find({ uid:response.uid});
+            console.log('Got profile: ', userProfile);
+            const { uid } = userProfile[0];
+            if(uid){
+                return res.status(200).send('Login successful');
+            }else{
+                return res.status(400).send('User not found.');
+            }
+        }
+    }catch(err){
+        console.log('ERROR: ', err.message);
+        return res.status(400).send('Could not login, an authentication error occurred.');
+    }
+});
 
 io.on('connection', ( socket ) => {
     console.log('We have a connection!');
