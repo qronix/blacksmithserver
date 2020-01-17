@@ -48,29 +48,34 @@ app.post('/register', async (req, res)=>{
     }
 });
 
-app.post('/loginWithCreds', async(req, res) => {
+app.post('/verifytoken', async(req, res) => {
     const { TOKEN } = req.body;
     try{
         const response = await admin.auth().verifyIdToken(TOKEN);
         if(response.uid){
             const userProfile = await User.find({ uid:response.uid});
             console.log('Got profile: ', userProfile);
+            User.updateOne({uid:response.uid},{lastLogin:Date.now()});
             const { uid } = userProfile[0];
             if(uid){
-                return res.status(200).send('Login successful');
+                return res.status(200).send('Valid token.');
             }else{
-                return res.status(400).send('User not found.');
+                return res.status(400).send('Invalid token.');
             }
         }
     }catch(err){
         console.log('ERROR: ', err.message);
-        return res.status(400).send('Could not login, an authentication error occurred.');
+        return res.status(400).send('Could not verify token.');
     }
 });
 
 io.on('connection', ( socket ) => {
     console.log('We have a connection!');
+    io.emit('hey','sup hoe');
+    socket.emit('hey', 'sup hoe');
+    socket.on('disconnect',function(){ console.log('Connection has closed')});
 });
+
 
 http.listen(3001, () => {
     console.log('Blacksmith server listening on port 3001');
