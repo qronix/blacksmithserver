@@ -5,6 +5,8 @@ const bodyParser = require('body-parser');
 const { admin } = require('./firebase/firebase');
 const { db } = require('./db/db');
 const { User } = require('./db/user.model');
+const { updateProfile }  = require('./utils/updateProfile');
+const moment  = require('moment');
 
 //parse application/x-www-form-urlendcoded
 app.use(bodyParser.urlencoded({ extended:false }));
@@ -48,6 +50,30 @@ app.post('/register', async (req, res)=>{
     }
 });
 
+app.post('/login', async(req, res)=>{
+    const { TOKEN } = req.body;
+    try{
+        const response = await admin.auth().verifyIdToken(TOKEN);
+        if(response.uid){
+            const uid = response.uid;
+            const userProfile = await User.find({uid});
+            console.log('Got profile: ', userProfile);
+            //update and get new profile data
+            updateProfile(userProfile[0]);
+            //generate session token
+            //push updated profile and session token to Redis
+            //update last login time
+            const update = await User.updateOne({uid}, { lastLogin:moment.utc().valueOf() });
+            console.log('update response: ', update);
+            //send session token
+            res.status(200).send('Login successful');
+        }
+    }catch(err){
+        console.log('Login error: ', err.message);
+        res.status(400).send('Login failed');
+    }
+});
+
 app.post('/verifytoken', async(req, res) => {
     const { TOKEN } = req.body;
     try{
@@ -55,7 +81,7 @@ app.post('/verifytoken', async(req, res) => {
         if(response.uid){
             const userProfile = await User.find({ uid:response.uid});
             console.log('Got profile: ', userProfile);
-            User.updateOne({uid:response.uid},{lastLogin:Date.now()});
+            User.updateOne({uid:response.uid},{lastLogin:moment.utc().valueOf()});
             const { uid } = userProfile[0];
             if(uid){
                 return res.status(200).send('Valid token.');
@@ -71,8 +97,9 @@ app.post('/verifytoken', async(req, res) => {
 
 io.on('connection', ( socket ) => {
     console.log('We have a connection!');
-    io.emit('hey','sup hoe');
-    socket.emit('hey', 'sup hoe');
+    //lookup session token in Redis
+    //if token is found, send profile data to client
+    //if no token, disconnect client
     socket.on('disconnect',function(){ console.log('Connection has closed')});
 });
 

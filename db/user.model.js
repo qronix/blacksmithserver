@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+const moment = require('moment');
 const Schema = mongoose.Schema;
 
 const { validateEmail } = require('../utils/validate');
@@ -22,11 +23,11 @@ let userSchema = new Schema({
     },
     created:{
         type: Date,
-        default: Date.now(),
+        default: moment.utc(),
     },
     lastLogin:{
         type: Date,
-        default: Date.now()
+        default: moment.utc()
     },
     game:{
         premium:{
@@ -50,6 +51,22 @@ let userSchema = new Schema({
                 money:0,
                 moneyPerSecond:0
             }
+        },
+        modifiers:{
+            type:Object,
+            default:{
+                spawnLevel:1,
+                moneyPerSecondDelta:1,
+                forgeSpeed:1,
+                autoMerge:{
+                    active: false,
+                    mergeSpeed:500
+                }
+            }
+        },
+        currentForgeProgress:{
+            type: Number,
+            default: 0
         },
         //create stand alone model
         upgrades:{

@@ -15,6 +15,10 @@ const itemSchema = new Schema({
     img:{
         type: String,
         required: true,
+    },
+    itemID:{
+        type: Number,
+        required: true
     }
 });
 
