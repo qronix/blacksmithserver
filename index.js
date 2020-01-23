@@ -1,12 +1,38 @@
 const app = require('express')();
 const http = require('http').createServer(app);
+// const http = require('http');
+
 const io = require('socket.io')(http);
+// const io = require('socket.io')(3000);
+// const server = http.createServer();
 const bodyParser = require('body-parser');
 const { admin } = require('./firebase/firebase');
 const { db } = require('./db/db');
 const { User } = require('./db/user.model');
 const { updateProfile }  = require('./utils/updateProfile');
 const moment  = require('moment');
+const bluebird = require('bluebird');
+const redis = require('redis');
+const adapter = require('socket.io-redis');
+
+const { 
+    installItemDocument,
+    installEffectDocument,
+    installUpgradeDocument, 
+} = require('./db/utils');
+
+bluebird.promisifyAll(redis);
+
+const redisAdapter = adapter({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASS || 'password',
+});
+
+io.attach(http);
+io.adapter(redisAdapter);
+
+
 
 //parse application/x-www-form-urlendcoded
 app.use(bodyParser.urlencoded({ extended:false }));
@@ -106,5 +132,8 @@ io.on('connection', ( socket ) => {
 
 http.listen(3001, () => {
     console.log('Blacksmith server listening on port 3001');
+    // installItemDocument();
+    // installEffectDocument();
+    // installUpgradeDocument();
 });
 

@@ -1,6 +1,8 @@
 const moment = require('moment');
 const { User } = require('../db/user.model');
 const { getEmptySpaceCount, gridHasSpace } = require('../utils/gameUtils');
+const { getItemInfoById } = require('../db/utils');
+
 
 const updateProfile = profile => {
     const { lastLogin } = profile;
@@ -21,6 +23,7 @@ const updateProfile = profile => {
     const { gridItems, currentForgeProgress } = profile.game;
     
     let updatedItems = [...gridItems];
+    let addedItemsCount = 0;
     //board has space?
     const emptySpaceCount = getEmptySpaceCount(gridItems);
     if( emptySpaceCount > 0){
@@ -31,6 +34,7 @@ const updateProfile = profile => {
         for(let i = 0; i < TIMES_FORGE_SHOULD_PROGRESS; i++){
             if(gridHasSpace(updatedItems)){
                 updatedItems.push(spawnLevel);
+                addedItemsCount++;
             }else{
                 break;
             }
@@ -48,7 +52,35 @@ const updateProfile = profile => {
     const updatedMoney = (((money * moneyPerSecond) * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN);
 
     //calc new money per second
+    const { moneyPerSecond:addedItemMPS } = getItemInfoById(spawnLevel);
+    const updatedMoneyPerSecond = (moneyPerSecond + (addedItemMPS * addedItemsCount));
 
+    const updatedProfile = {
+        game:{
+            gridItems:updatedItems,
+            playerData:{
+                moneyPerSecond:updatedMoneyPerSecond,
+                ...profile.game.playerData
+            },
+            currentForgeProgress:updatedForgeProgress,
+            ...profile.game
+        }
+    }
+    pushProfileUpdate(updatedProfile);
+}
+
+const pushProfileUpdate = profile => {
+    return new Promise(async (res, rej) => {
+        const { uid } = profile;
+        try{
+            const response = await User.updateOne({uid},{...profile});
+            console.log('Got update profile response: ', response);
+            res(true);
+        }catch(err){
+            console.log('Profile update error: ', err.message);
+            rej(new Error('Could not update profile'));
+        }
+    });
 }
 
 module.exports = { updateProfile };

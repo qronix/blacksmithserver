@@ -5,12 +5,13 @@ const Schema = mongoose.Schema;
 const effectSchema = new Schema({
     name:{
         type: String,
-        required,
+        required: true,
         minlength: 3,
+        unique:true,
     },
     modifier:{
         type: Object,
-        required
+        required: true,
     },
 });
 

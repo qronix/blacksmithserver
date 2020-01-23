@@ -7,6 +7,7 @@ const itemSchema = new Schema({
         type: String,
         required: true,
         minlength: 3,
+        unique: true,
     },
     moneyPerSecond:{
         type: Number,
@@ -14,14 +15,14 @@ const itemSchema = new Schema({
     },
     img:{
         type: String,
-        required: true,
     },
     itemID:{
         type: Number,
-        required: true
+        required: true,
+        unique: true
     }
 });
 
-const Item = mongoose('Item', itemSchema);
+const Item = mongoose.model('Item', itemSchema);
 
 module.exports = { Item };
