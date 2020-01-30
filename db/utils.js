@@ -80,10 +80,10 @@ const getItemInfoById = itemID => {
     return new Promise(async (res, rej) => {
         try{
             const item = await Item.find({ itemID });
-            rej(item);
+            res(item[0]);
         }catch(err){
             console.log('Get item error: ', err.message);
-            res(null);
+            rej(null);
         }
     });
 }

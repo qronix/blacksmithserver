@@ -29,6 +29,10 @@ let userSchema = new Schema({
         type: Date,
         default: moment.utc()
     },
+    firstLogin:{
+        type: Boolean,
+        default: true
+    },
     game:{
         premium:{
             type: Number,
