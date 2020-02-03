@@ -34,6 +34,11 @@ const upgradeSchema = new Schema({
     icon:{
         type: String,
         required: true
+    },
+    upgradeID:{
+        type: Number,
+        required: true,
+        unique: true,
     }
 });
 

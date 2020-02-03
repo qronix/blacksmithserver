@@ -85,9 +85,9 @@ app.post('/login', async(req, res) => {
             }
             const userProfile = await User.find({ uid });
             //update and get new profile data
-            const profileChanges = await updateProfile(userProfile[0]);
+            const profileChanges = await updateProfile(JSON.stringify(userProfile[0]));
             const updatedProfile = { ...userProfile[0].toObject(), ...profileChanges };
-            const {sessionID, token} = generateSessionIdAndToken(updatedProfile);
+            const { sessionID, token } = generateSessionIdAndToken(updatedProfile);
             //update last login time
             const update = await User.updateOne({ uid }, { lastLogin:moment.utc().valueOf() });
             //send session token

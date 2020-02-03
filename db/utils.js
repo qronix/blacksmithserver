@@ -26,7 +26,7 @@ const installUpgradeDocument = async () => {
     }
 }
 
-const installEffectDocument = async () =>{
+const installEffectDocument = async () => {
     for(let i=0; i<EFFECTS.length; i++){
         try{
             await addNewEffect(EFFECTS[i]);
@@ -37,8 +37,8 @@ const installEffectDocument = async () =>{
 }
 
 const addNewItem = itemData => {
-    const item = new Item({...itemData});
-    return new Promise(async (res, rej)=>{
+    const item = new Item({ ...itemData });
+    return new Promise(async (res, rej) => {
         try{
             await item.save();
             res(true);
@@ -50,8 +50,8 @@ const addNewItem = itemData => {
 }
 
 const addNewEffect = effectData => {
-    const effect = new Effect({...effectData});
-    return new Promise(async (res, rej)=>{
+    const effect = new Effect({ ...effectData });
+    return new Promise(async (res, rej) => {
         try{
             await effect.save();
             res(true);

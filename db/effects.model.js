@@ -13,6 +13,11 @@ const effectSchema = new Schema({
         type: Object,
         required: true,
     },
+    effectID:{
+        type: Number,
+        required: true,
+        unique: true,
+    }
 });
 
 const Effect = mongoose.model('Effect', effectSchema);

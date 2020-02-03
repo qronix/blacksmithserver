@@ -6,7 +6,10 @@ const { getItemInfoById } = require('../db/utils');
 
 const updateProfile = async profile => {
     try{
-        const { lastLogin, firstLogin, uid } = profile;
+        console.log('PROFILE: ', profile);
+        console.log('PROFILE PARSED: ', JSON.parse(profile));
+        const { lastLogin, firstLogin, uid, game:{ playerData, modifiers }, game } = JSON.parse(profile);
+        console.log('GAME: ', game);
         if(firstLogin){
             return pushProfileUpdate(uid, { firstLogin: false });
         }
@@ -22,9 +25,9 @@ const updateProfile = async profile => {
         //profile update logic:
         //update player money
         //profile.game.playerData.moneyPerSecond * SECONDS_SINCE_LAST_LOGIN * profile.game.modifiers.moneyPerSecondDelta
-        const { money, moneyPerSecond } = profile.game.playerData;
-        const { forgeSpeed, moneyPerSecondDelta, spawnLevel } = profile.game.modifiers;
-        const { gridItems, currentForgeProgress } = profile.game;
+        const { money, moneyPerSecond } = playerData;
+        const { forgeSpeed, moneyPerSecondDelta, spawnLevel } = modifiers;
+        const { gridItems, currentForgeProgress } = game;
         
         let updatedItems = [...gridItems];
         let addedItemsCount = 0;
@@ -65,10 +68,10 @@ const updateProfile = async profile => {
         
         const updatedProfile = {
             game:{
-                // ...profile.game,
+                ...game,
                 gridItems:updatedItems,
                 playerData:{
-                    // ...profile.game.playerData,
+                    ...playerData,
                     moneyPerSecond:updatedMoneyPerSecond,
                     money: updatedMoney,
                 },
@@ -83,6 +86,7 @@ const updateProfile = async profile => {
 }
 
 const pushProfileUpdate = (uid, changes) => {
+    console.log('Applying profile changes: ', changes);
     return new Promise(async (res, rej) => {
         try{
             await User.updateOne({uid}, {...changes});
