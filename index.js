@@ -20,12 +20,14 @@ const {
     removeSession,
     getSessionInfo,
     getGameDataBySocketId,
+    endNetworkSessionBySessionId,
 } = require('./network/network');
 
 const {
     generateSessionIdAndToken,
     findSessionById,
     findSessionBySessionId,
+    removeSessionBySessionId,
 } = require('./session/sessions');
 
 
@@ -99,6 +101,17 @@ app.post('/login', async(req, res) => {
     }
 });
 
+app.post('/logout', (req, res) => {
+    try{
+        const { sessionID } = req.body;
+        removeSessionBySessionId(sessionID);
+        endNetworkSessionBySessionId(sessionID);
+        return res.status(200).send('Logged out.');
+    }catch(err){
+        console.log('Logout error: ', err.message);
+    }
+});
+
 app.post('/verifytoken', async(req, res) => {
     const { TOKEN } = req.body;
     try{
@@ -136,10 +149,10 @@ io.on('connection', ( socket ) => {
             console.log('SOCKET ID: ', socket.id);
             console.log('Does network session exist: ', networkSessionExists);
             if(networkSessionExists){
-                console.log(`A duplicate session for ID: ${sessionID} was prevented`);
+                console.log(`A duplicate session for ID: ${ sessionID } was prevented`);
                 socket.disconnect(true);
             }else{
-                addNetworkSession(sessionData);
+                addNetworkSession(sessionData, socket);
                 const gameData = JSON.stringify(getGameDataBySocketId(socket.id));
                 console.log('Sending game data to client');
                 socket.emit('initialize', gameData);
@@ -156,6 +169,7 @@ io.on('connection', ( socket ) => {
     socket.on('disconnect',() => {
         try{
             console.log('Client disconnected, removing session....');
+            //clarify this is a NETWORK session being removed
             const clearSessionResult = removeSession(socket.id);
             (clearSessionResult) ? console.log('Session removed') : console.log('Session not found');
         }catch(err){

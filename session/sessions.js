@@ -1,8 +1,12 @@
+const moment = require('moment');
+const jwt = require('jsonwebtoken');
+const uuid = require('uuid');
+
+const { PRIVATE_KEY } = require('./privateKey');
+
 const SESSIONS = new Map();
 const SESSION_ID_MAP = new Map();
-const jwt = require('jsonwebtoken');
-const { PRIVATE_KEY } = require('./privateKey');
-const uuid = require('uuid');
+
 
 const findSessionById = id => {
     return SESSIONS.get(id) || false;
@@ -13,13 +17,13 @@ const findSessionBySessionId = id => {
 }
 
 const getSessionDataBySessionId = id => {
-    console.log('Got session id: ', id);
+    // console.log('Got session id: ', id);
     try{
         const targetUid = SESSION_ID_MAP.get(id);
         //TODO: send modifiers and upgrades
         const { game }  = SESSIONS.get(targetUid);
         if(game){
-            console.log('Found session data by session id');
+            // console.log('Found session data by session id');
             return game;
         }else{
             return null;
@@ -30,12 +34,16 @@ const getSessionDataBySessionId = id => {
     }
 }
 
+const updateMoneyBySessionId = sessionID => {
+    
+}
+
 const addSession = data => {
     //check user id is not in sessions list
     const { uid } = data;
     const userHasSession = findSessionById(uid);
     if(!userHasSession){
-        SESSIONS.set(uid, data);
+        SESSIONS.set(uid, { ...data, lastUpdate:moment.utc() });
         const { sessionID } = data;
         SESSION_ID_MAP.set(sessionID, uid);
         return true;
@@ -53,7 +61,7 @@ const removeSessionBySessionId = sessionId => {
     try{
         const targetUid = SESSION_ID_MAP.get(sessionId);
         SESSIONS.delete(targetUid);
-        console.log('Client session has been removed');
+        // console.log('Client session has been removed');
         return true;
     }catch(err){
         console.log('Could not delete user session by id: ', err.message);
@@ -65,7 +73,7 @@ const generateSessionIdAndToken = (data = {}) => {
     try{
         const { uid } = data;
         const userHasSession = findSessionById(uid);
-        console.log('user session: ', userHasSession);
+        // console.log('user session: ', userHasSession);
         if(!userHasSession){
             //TODO: add check to ensure uuid is unique?
             const sessionID = uuid();
@@ -86,11 +94,12 @@ const generateSessionIdAndToken = (data = {}) => {
     }
 }
 
+
 module.exports = {
     findSessionById,
     findSessionBySessionId,
     clearSessionById,
     removeSessionBySessionId,
     generateSessionIdAndToken,
-    getSessionDataBySessionId
+    getSessionDataBySessionId,
 }
