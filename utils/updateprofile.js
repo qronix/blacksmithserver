@@ -1,13 +1,13 @@
 const moment = require('moment');
 const { User } = require('../db/user.model');
-const { getEmptySpaceCount, gridHasSpace } = require('../utils/gameUtils');
+const { getEmptySpaceCount, gridHasSpace, addItemToGrid } = require('../utils/gameUtils');
 const { getItemInfoById } = require('../db/utils');
 
 
 const updateProfile = async profile => {
     try{
-        console.log('PROFILE: ', profile);
-        console.log('PROFILE PARSED: ', JSON.parse(profile));
+        // console.log('PROFILE: ', profile);
+        // console.log('PROFILE PARSED: ', JSON.parse(profile));
         const { lastLogin, firstLogin, uid, game:{ playerData, modifiers }, game } = JSON.parse(profile);
         console.log('GAME: ', game);
         if(firstLogin){
@@ -39,17 +39,20 @@ const updateProfile = async profile => {
             //what about modifiers?
             const TIMES_FORGE_SHOULD_PROGRESS = (SECONDS_SINCE_LAST_LOGIN * 1000) / 50;
             
-            // console.log('Spawn level: ', spawnLevel);
 
-            //BUG HERE FIX IT INFINITE LOOP
-            // for(let i = 0; i < TIMES_FORGE_SHOULD_PROGRESS; i++){
-            //     if(gridHasSpace(updatedItems)){
-            //         updatedItems.push(spawnLevel);
-            //         addedItemsCount++;
-            //     }else{
-            //         break;
-            //     }
-            // }
+            //flatten grid
+            // BUG HERE FIX IT INFINITE LOOP
+            for(let i = 0; i < 5; i++){
+                //addItemToGrid will return true if an item could be added
+                //otherwise, it will return false, this will cause
+                //the loop to break
+                const { result, grid } = addItemToGrid(updatedItems, spawnLevel);
+                updatedItems = grid;
+                if(!result === true){
+                    break;
+                }
+                // console.log('Updated items: ', grid);
+            }
         }
     
         //At current tick rate of 50ms, the forge progress bar can 

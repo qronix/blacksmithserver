@@ -19,6 +19,7 @@ const {
     addNetworkSession,
     removeSession,
     getSessionInfo,
+    getSessionIdFromSocketId,
     getGameDataBySocketId,
     endNetworkSessionBySessionId,
 } = require('./network/network');
@@ -28,6 +29,8 @@ const {
     findSessionById,
     findSessionBySessionId,
     removeSessionBySessionId,
+    updateMoneyBySessionId,
+    addItemBySessionId,
 } = require('./session/sessions');
 
 
@@ -166,6 +169,20 @@ io.on('connection', ( socket ) => {
         }
     });
 
+    socket.on('updateMoney', msg => {
+        const money = Number.parseInt(msg);
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        const validRequest = updateMoneyBySessionId(sessionID, money);
+        if(!validRequest){
+            console.log('Not a valid request!');
+        }
+    });
+
+    socket.on('addItem', msg => {
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        const result = addItemBySessionId(sessionID);
+        console.log('Add item result was: ', result);
+    })
     socket.on('disconnect',() => {
         try{
             console.log('Client disconnected, removing session....');

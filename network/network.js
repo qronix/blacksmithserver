@@ -11,11 +11,6 @@ const doesNetworkSessionExist = sessionID => {
     return NETWORK_SESSIONS.has(sessionID);
 }
 
-const updateMoney = socketID => {
-    const sessionID = getSessionIdFromSocketId(socketID);
-
-}
-
 const getSessionIdFromSocketId = socketID => {
     return sessionID  = SESSION_SOCKET_MAP.get(socketID);
 }
@@ -127,6 +122,7 @@ module.exports = {
     addNetworkSession,
     removeSession,
     getSessionInfo,
+    getSessionIdFromSocketId,
     getGameDataBySocketId,
     validateIdentity,
     endNetworkSessionBySessionId,
