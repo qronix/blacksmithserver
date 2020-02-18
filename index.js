@@ -104,10 +104,10 @@ app.post('/login', async(req, res) => {
     }
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', async (req, res) => {
     try{
         const { sessionID } = req.body;
-        removeSessionBySessionId(sessionID);
+        await removeSessionBySessionId(sessionID);
         endNetworkSessionBySessionId(sessionID);
         return res.status(200).send('Logged out.');
     }catch(err){
@@ -143,21 +143,21 @@ io.on('connection', ( socket ) => {
     socket.emit('identify');
 
     socket.on('identity', (data) => {
-        console.log('Got identity: ', data);
+        // console.log('Got identity: ', data);
         const { sessionID, token } = JSON.parse(data);
         const sessionData = { sessionID, token, socketID:socket.id };
         const isValidClientSession = findSessionBySessionId(sessionID);
         if(isValidClientSession){
             const networkSessionExists = doesNetworkSessionExist(sessionID);
-            console.log('SOCKET ID: ', socket.id);
-            console.log('Does network session exist: ', networkSessionExists);
+            // console.log('SOCKET ID: ', socket.id);
+            // console.log('Does network session exist: ', networkSessionExists);
             if(networkSessionExists){
                 console.log(`A duplicate session for ID: ${ sessionID } was prevented`);
                 socket.disconnect(true);
             }else{
                 addNetworkSession(sessionData, socket);
                 const gameData = JSON.stringify(getGameDataBySocketId(socket.id));
-                console.log('Sending game data to client');
+                // console.log('Sending game data to client');
                 socket.emit('initialize', gameData);
                 // console.log('Adding network session');
                 //TODO: Add duplicate session error emit
@@ -181,9 +181,32 @@ io.on('connection', ( socket ) => {
     socket.on('addItem', msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
         const result = addItemBySessionId(sessionID);
-        console.log('Add item result was: ', result);
-    })
-    socket.on('disconnect',() => {
+        if(result === false){
+            removeSessionBySessionId(sessionID);
+            removeSession(socket.id);
+        }
+        // console.log('Add item result was: ', result);
+    });
+
+    socket.on('moveItem', msg => {
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        const result = moveItemForSessionId(sessionID, JSON.parse(msg));
+        if(result === false){
+            removeSessionBySessionId(sessionID);
+            removeSession(socket.id);
+        }
+    });
+
+    socket.on('mergeItems', msg => {
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        const result = mergeItemsForSessionId(sessionID, JSON.parse(msg));
+        if(result === false){
+            removeSessionBySessionId(sessionID);
+            removeSession(socket.id);
+        }
+    });
+
+    socket.on('disconnect', () => {
         try{
             console.log('Client disconnected, removing session....');
             //clarify this is a NETWORK session being removed
@@ -198,7 +221,7 @@ io.on('connection', ( socket ) => {
 
 http.listen(3001, () => {
     console.log('Blacksmith server listening on port 3001');
-    // installItemDocument();
+    installItemDocument();
     // installEffectDocument();
     // installUpgradeDocument();
 });

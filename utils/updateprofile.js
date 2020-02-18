@@ -1,6 +1,6 @@
 const moment = require('moment');
 const { User } = require('../db/user.model');
-const { getEmptySpaceCount, gridHasSpace, addItemToGrid } = require('../utils/gameUtils');
+const { getEmptySpaceCount, gridHasSpace, calcMoneyPerSecond, addItemToGrid } = require('../utils/gameUtils');
 const { getItemInfoById } = require('../db/utils');
 
 
@@ -9,7 +9,7 @@ const updateProfile = async profile => {
         // console.log('PROFILE: ', profile);
         // console.log('PROFILE PARSED: ', JSON.parse(profile));
         const { lastLogin, firstLogin, uid, game:{ playerData, modifiers }, game } = JSON.parse(profile);
-        console.log('GAME: ', game);
+        // console.log('GAME: ', game);
         if(firstLogin){
             return pushProfileUpdate(uid, { firstLogin: false });
         }
@@ -25,7 +25,7 @@ const updateProfile = async profile => {
         //profile update logic:
         //update player money
         //profile.game.playerData.moneyPerSecond * SECONDS_SINCE_LAST_LOGIN * profile.game.modifiers.moneyPerSecondDelta
-        const { money, moneyPerSecond } = playerData;
+        const { money } = playerData;
         const { forgeSpeed, moneyPerSecondDelta, spawnLevel } = modifiers;
         const { gridItems, currentForgeProgress } = game;
         
@@ -37,22 +37,42 @@ const updateProfile = async profile => {
             // let progress = currentForgeProgress;
             // const progressDelta = forgeSpeed;
             //what about modifiers?
-            const TIMES_FORGE_SHOULD_PROGRESS = (SECONDS_SINCE_LAST_LOGIN * 1000) / 50;
-            
 
-            //flatten grid
-            // BUG HERE FIX IT INFINITE LOOP
-            for(let i = 0; i < 5; i++){
-                //addItemToGrid will return true if an item could be added
-                //otherwise, it will return false, this will cause
-                //the loop to break
-                const { result, grid } = addItemToGrid(updatedItems, spawnLevel);
+            //calcs the amount the forge should progress since last login
+            //this assumes a 50ms tick rate from client side
+            //the forge should progress 20 times in one second by default at 50ms tick rate
+            // const TIMES_FORGE_SHOULD_PROGRESS = (SECONDS_SINCE_LAST_LOGIN / 50) * 1000;
+            const ITEMS_TO_GENERATE = Math.ceil(SECONDS_SINCE_LAST_LOGIN / 5);
+            console.log("Seconds since last login: ", SECONDS_SINCE_LAST_LOGIN);
+            console.log("\x1b[33m%s\x1b[0m",`Items to generate: ${ITEMS_TO_GENERATE}`);
+
+            for(i=0; i<ITEMS_TO_GENERATE; i++){
+                const {result, grid} = addItemToGrid(updatedItems, spawnLevel);
                 updatedItems = grid;
-                if(!result === true){
+                if(result === false){
                     break;
                 }
-                // console.log('Updated items: ', grid);
             }
+
+            // //add condition for TIMES_FORGE_SHOULD_PROGRESS === 100
+            // if(TIMES_FORGE_SHOULD_PROGRESS < 100){
+            // //use this to update forgeProgress
+
+            // }else{
+            //     // for(let i = 0; i < TIMES_FORGE_SHOULD_PROGRESS; i++){
+            //     //     //addItemToGrid will return true if an item could be added
+            //     //     //otherwise, it will return false, this will cause
+            //     //     //the loop to break
+            //     //     if((i%100) === 0){
+            //     //         const { result, grid } = addItemToGrid(updatedItems, spawnLevel);
+            //     //         updatedItems = grid;
+            //     //         if(!result === true){
+            //     //             break;
+            //     //         }
+            //     //     }
+            //     //     // console.log('Updated items: ', grid);
+            //     // }
+            // }
         }
     
         //At current tick rate of 50ms, the forge progress bar can 
@@ -63,11 +83,13 @@ const updateProfile = async profile => {
         //we could use the fact that 0.001 seconds = 1/5000 of the bar
         //however to avoid complexity, I am going to use this method
         const updatedForgeProgress = (SECONDS_SINCE_LAST_LOGIN % 5) * 20;
-        const updatedMoney = (((money * moneyPerSecond) * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN);
+        const moneyPerSecond = await calcMoneyPerSecond(updatedItems, moneyPerSecondDelta);
+        // const updatedMoney = (((money * moneyPerSecond) * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN);
+        const updatedMoney = (money + ((moneyPerSecond * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN));
     
         //calc new money per second
-        const { moneyPerSecond:addedItemMPS } = await getItemInfoById(spawnLevel);
-        const updatedMoneyPerSecond = (moneyPerSecond + (addedItemMPS * addedItemsCount));
+        // const { moneyPerSecond:addedItemMPS } = await getItemInfoById(spawnLevel);
+        // const updatedMoneyPerSecond = (moneyPerSecond + (addedItemMPS * addedItemsCount));
         
         const updatedProfile = {
             game:{
@@ -75,7 +97,7 @@ const updateProfile = async profile => {
                 gridItems:updatedItems,
                 playerData:{
                     ...playerData,
-                    moneyPerSecond:updatedMoneyPerSecond,
+                    moneyPerSecond,
                     money: updatedMoney,
                 },
                 currentForgeProgress:updatedForgeProgress,

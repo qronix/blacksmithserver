@@ -2,7 +2,15 @@ const moment = require('moment');
 const jwt = require('jsonwebtoken');
 const uuid = require('uuid');
 
-const { gridHasSpace } = require('../utils/gameUtils');
+const { User } = require('../db/user.model');
+
+const { 
+    gridHasSpace, 
+    addItemToGrid, 
+    calcMoneyPerSecond,
+    moveItems,
+    mergeItems,
+} = require('../utils/gameUtils');
 
 const { PRIVATE_KEY } = require('./privateKey');
 
@@ -42,7 +50,7 @@ const getBetweenUpdateAndNow = lastUpdate => {
     const CURRENT_TIME = moment.utc();
     //change to milliseconds
     const difference = CURRENT_TIME.diff(lastUpdate, 'seconds');
-    console.log(`It has been ${difference} seconds since the last update`);
+    // console.log(`It has been ${difference} seconds since the last update`);
     return difference;
 }
 
@@ -66,7 +74,12 @@ const updateMoneyBySessionId = (sessionID, clientMoney) => {
             lastUpdate,
         } = previousData;
         // console.log('Session is: ', SESSIONS.get())
-        const TIME_DIFFERENCE_SINCE_UPDATE = getBetweenUpdateAndNow(lastUpdate);
+        let TIME_DIFFERENCE_SINCE_UPDATE = getBetweenUpdateAndNow(lastUpdate);
+
+        if(TIME_DIFFERENCE_SINCE_UPDATE < 1){
+            TIME_DIFFERENCE_SINCE_UPDATE = 1;
+        }
+
         // console.log(`Money: ${money}`);
         // console.log(`MoneyPerSecond: ${moneyPerSecond}`);
         // console.log(`MoneyPerSecondDelta: ${moneyPerSecondDelta}`);
@@ -74,23 +87,27 @@ const updateMoneyBySessionId = (sessionID, clientMoney) => {
         // console.log(`Correct money calculated as: ${correctMoney}`);
         // console.log(`Client sent money as: ${clientMoney}`);
         // console.log(`These money amounts match: ${correctMoney === clientMoney}`);
-        SESSIONS.set(targetUid, {...previousData, game:{...previousData.game, playerData:{ ...previousData.game.playerData, correctMoney }}, lastUpdate:moment.utc()});
-        // console.log('Updated data: ', SESSIONS.get(targetUid));
+        SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, playerData:{ ...previousData.game.playerData, money:correctMoney }}, lastUpdate:moment.utc() });
 
+        if(correctMoney === clientMoney){
+            return true;
+        }else{
+            return false;
+        }
     }catch(err){
         console.log('Update money error: ', err.message);
         return false;
     }
 }
 
-const addItemBySessionId = sessionID => {
+const addItemBySessionId = async sessionID => {
     const targetUid = SESSION_ID_MAP.get(sessionID);
     const previousData = SESSIONS.get(targetUid);
-    const { lastItem, game:{ currentForgeProgress, modifiers:{ forgeSpeed } } } = previousData;
+    const { lastItem, game:{ gridItems, currentForgeProgress, modifiers:{ forgeSpeed, spawnLevel, moneyPerSecondDelta } } } = previousData;
     const hasSpaceForItem = checkForGridSpace(targetUid);
 
-    console.log('Calling add item');
-    console.log('Current forge progress: ', currentForgeProgress);
+    // console.log('Calling add item');
+    // console.log('Current forge progress: ', currentForgeProgress);
     if(hasSpaceForItem){
         if(lastItem){
             const CURRENT_TIME = moment.utc();
@@ -103,17 +120,67 @@ const addItemBySessionId = sessionID => {
             }
             if(UPDATED_FORGE_PROGRESS >= 1){
                 //update forge progress to remainder * 100
-                SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, currentForgeProgress:0} })
+                // SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, currentForgeProgress:0} })
+                UPDATED_FORGE_PROGRESS = 0;
             }
-            console.log(`Updated forge progress: ${ UPDATED_FORGE_PROGRESS }`);
-            SESSIONS.set(targetUid, {...previousData, lastItem:moment.utc()});
+            // console.log(`Updated forge progress: ${ UPDATED_FORGE_PROGRESS }`);
+            SESSIONS.set(targetUid, {...previousData, game:{...previousData.game, currentForgeProgress:UPDATED_FORGE_PROGRESS }, lastItem:moment.utc()});
         }else{
             SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, currentForgeProgress:0}, lastItem:moment.utc() });
-            console.log(`Updated forge progress: 0`);
+            // console.log(`Updated forge progress: 0`);
         }
-        return true;
+        //TODO add item
+        debugger
+        const {result, grid} = addItemToGrid(gridItems, spawnLevel);
+        debugger
+        if(result === true){
+            debugger
+            const updatedMoneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
+            debugger
+            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems: grid, playerData:{ ...previousData.playerData, moneyPerSecond:updatedMoneyPerSecond } } });
+            // console.log('New item added to grid and MPS updated!');
+            return true;
+        }
+        return false;
     }else{
         console.log('No space for items! Stop cheating!');
+        return false;
+    }
+}
+
+const moveItemForSessionId = (sessionID, request) => {
+    try{
+        const targetUid = SESSION_ID_MAP.get(sessionID);
+        const { game:gridItems } = SESSIONS.get(targetUid);
+        const { result, grid } = mergeItems(gridItems, request);
+        
+        if(result === true){
+            const previousData = SESSIONS.get(targetUid);
+            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid } });
+            return true;
+        }else{
+            return false;
+        }
+    }catch(err){
+        console.log('Move item error: ', err.message);
+        return false;
+    }
+}
+
+const mergeItemsForSessionId = (sessionID, request) => {
+    try{
+        const targetUid = SESSION_ID_MAP.get(sessionID);
+        const { result, grid } = mergeItems(gridItems, request);
+        const { game:gridItems } = SESSIONS.get(targetUid);
+       
+        if(result === true){
+            const previousData = SESSIONS.get(targetUid);
+            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid } });
+        }else{
+            return false;
+        }
+    }catch(err){
+        console.log('Merge items error: ', err.message);
         return false;
     }
 }
@@ -137,9 +204,10 @@ const clearSessionById = uid => {
     return SESSIONS.delete(uid);
 }
 
-const removeSessionBySessionId = sessionId => {
+const removeSessionBySessionId = async sessionId => {
     try{
         const targetUid = SESSION_ID_MAP.get(sessionId);
+        await saveSessionBySessionId(sessionId);
         SESSIONS.delete(targetUid);
         // console.log('Client session has been removed');
         return true;
@@ -147,6 +215,15 @@ const removeSessionBySessionId = sessionId => {
         console.log('Could not delete user session by id: ', err.message);
         return false;
     }
+}
+
+const saveSessionBySessionId = async sessionID => {
+    const targetUid = SESSION_ID_MAP.get(sessionID);
+    const sessionData = SESSIONS.get(targetUid);
+    const lastLogin = moment.utc().valueOf();
+    const result = await User.updateOne({ uid:targetUid },  { ...sessionData, lastLogin });
+    console.log('Saved session: ', result);
+    console.log('Saving money as: ', sessionData.game.playerData.money);
 }
 
 const generateSessionIdAndToken = (data = {}) => {
@@ -184,4 +261,6 @@ module.exports = {
     getSessionDataBySessionId,
     updateMoneyBySessionId,
     addItemBySessionId,
+    mergeItemsForSessionId,
+    moveItemForSessionId,
 }
