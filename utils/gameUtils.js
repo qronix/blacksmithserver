@@ -55,6 +55,7 @@ const addItemToGrid = (grid, item) => {
 const moveItems = (grid, request) => {
 
     //todo: add result to return
+    debugger
     try{
         const { source, target} = request;
         const sourceItemId = grid[source.row][source.col];
@@ -82,6 +83,7 @@ const mergeItems = (grid, request) => {
         //else remove the source item (set to 0)
         //and increase the id of the target item
         //ensure target item id + 1 is less than or equal to max item rank
+        debugger
         const { source, target } = request;
         const sourceId = grid[source.row][source.col];
         const targetId = grid[target.row][target.col];

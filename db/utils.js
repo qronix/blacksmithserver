@@ -44,6 +44,7 @@ const addNewItem = itemData => {
             res(true);
             
         }catch(err){
+            console.log('Add item error: ', err.message);
             rej(false);
         }
     });
@@ -55,8 +56,8 @@ const addNewEffect = effectData => {
         try{
             await effect.save();
             res(true);
-            
         }catch(err){
+            console.log('Add effect error: ', err.message);
             rej(false);
         }
     });
@@ -70,7 +71,7 @@ const addNewUpgrade = upgradeData => {
             res(true);
             
         }catch(err){
-            console.log('Upgrade install error: ', err.message);
+            console.log('Add upgrade error: ', err.message);
             rej(false);
         }
     });

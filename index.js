@@ -31,6 +31,8 @@ const {
     removeSessionBySessionId,
     updateMoneyBySessionId,
     addItemBySessionId,
+    mergeItemsForSessionId,
+    moveItemForSessionId,
 } = require('./session/sessions');
 
 
@@ -188,21 +190,25 @@ io.on('connection', ( socket ) => {
         // console.log('Add item result was: ', result);
     });
 
-    socket.on('moveItem', msg => {
+    socket.on('moveItem', async msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const result = moveItemForSessionId(sessionID, JSON.parse(msg));
+        const {result, grid} = await moveItemForSessionId(sessionID, JSON.parse(msg));
         if(result === false){
             removeSessionBySessionId(sessionID);
             removeSession(socket.id);
+        }else{
+            socket.emit('gridUpdate', JSON.stringify(grid));
         }
     });
 
-    socket.on('mergeItems', msg => {
+    socket.on('mergeItems', async msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const result = mergeItemsForSessionId(sessionID, JSON.parse(msg));
+        const {result, grid} = await mergeItemsForSessionId(sessionID, JSON.parse(msg));
         if(result === false){
             removeSessionBySessionId(sessionID);
             removeSession(socket.id);
+        }else{
+            socket.emit('gridUpdate', JSON.stringify(grid));
         }
     });
 
@@ -221,7 +227,12 @@ io.on('connection', ( socket ) => {
 
 http.listen(3001, () => {
     console.log('Blacksmith server listening on port 3001');
-    installItemDocument();
+    // try{
+    //     console.log('Installing items model');
+    //     installItemDocument();
+    // }catch(err){
+    //     console.log('Item install error: ', err.message);
+    // }
     // installEffectDocument();
     // installUpgradeDocument();
 });

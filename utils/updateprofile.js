@@ -8,6 +8,7 @@ const updateProfile = async profile => {
     try{
         // console.log('PROFILE: ', profile);
         // console.log('PROFILE PARSED: ', JSON.parse(profile));
+        debugger
         const { lastLogin, firstLogin, uid, game:{ playerData, modifiers }, game } = JSON.parse(profile);
         // console.log('GAME: ', game);
         if(firstLogin){
