@@ -10,6 +10,9 @@ const {
     calcMoneyPerSecond,
     moveItems,
     mergeItems,
+    getItemMoneyPerSecond,
+    calcMergeMPS,
+    calcAddItemMPS,
 } = require('../utils/gameUtils');
 
 const { PRIVATE_KEY } = require('./privateKey');
@@ -69,7 +72,8 @@ const updateMoneyBySessionId = (sessionID, clientMoney) => {
                 playerData:{money, moneyPerSecond},
                 modifiers:{
                     moneyPerSecondDelta
-                }
+                },
+                gridItems
             },
             lastUpdate,
         } = previousData;
@@ -87,10 +91,15 @@ const updateMoneyBySessionId = (sessionID, clientMoney) => {
         console.log(`Money: ${money}`);
         console.log(`MoneyPerSecond: ${moneyPerSecond}`);
         console.log(`MoneyPerSecondDelta: ${moneyPerSecondDelta}`);
+        //Is this vulnerable?
         const correctMoney = (money + ((moneyPerSecond * moneyPerSecondDelta) * TIME_DIFFERENCE_SINCE_UPDATE));
         console.log(`Correct money calculated as: ${correctMoney}`);
         console.log(`Client sent money as: ${clientMoney}`);
         console.log(`These money amounts match: ${correctMoney === clientMoney}`);
+        if(correctMoney !== clientMoney){
+            console.log('Current grid items: ');
+            console.dir(gridItems);
+        }
         console.log('Updating session (money)!');
         SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, playerData:{ ...previousData.game.playerData, money:correctMoney }}, lastUpdate:moment.utc() });
 
@@ -108,7 +117,21 @@ const updateMoneyBySessionId = (sessionID, clientMoney) => {
 const addItemBySessionId = async sessionID => {
     const targetUid = SESSION_ID_MAP.get(sessionID);
     const previousData = SESSIONS.get(targetUid);
-    const { lastItem, game:{ gridItems, currentForgeProgress, modifiers:{ forgeSpeed, spawnLevel, moneyPerSecondDelta } } } = previousData;
+    const { 
+        lastItem, 
+        game:{ 
+            gridItems, 
+            currentForgeProgress, 
+            modifiers:{ 
+                forgeSpeed, 
+                spawnLevel, 
+                moneyPerSecondDelta 
+            }, 
+            playerData:{ 
+                moneyPerSecond 
+            } 
+        } 
+    } = previousData;
     const hasSpaceForItem = checkForGridSpace(targetUid);
 
     // console.log('Calling add item');
@@ -129,18 +152,19 @@ const addItemBySessionId = async sessionID => {
                 UPDATED_FORGE_PROGRESS = 0;
             }
             // console.log(`Updated forge progress: ${ UPDATED_FORGE_PROGRESS }`);
-            console.log('Updating session: (add item)!');
+            // console.log('Updating session: (add item)!');
             SESSIONS.set(targetUid, {...previousData, game:{...previousData.game, currentForgeProgress:UPDATED_FORGE_PROGRESS }, lastItem:moment.utc()});
         }else{
-            console.log('Updating session: (add item)!');
+            // console.log('Updating session: (add item)!');
             SESSIONS.set(targetUid, { ...previousData, game:{...previousData.game, currentForgeProgress:0}, lastItem:moment.utc() });
             // console.log(`Updated forge progress: 0`);
         }
         //TODO add item
         const {result, grid} = addItemToGrid(gridItems, spawnLevel);
+        const itemMPS = getItemMoneyPerSecond(spawnLevel);
         if(result === true){
-            const updatedMoneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
-            console.log('Updating session: (add item)!');
+            const updatedMoneyPerSecond = calcAddItemMPS(moneyPerSecond, moneyPerSecondDelta, itemMPS);
+            // console.log('Updating session: (add item)!');
             SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems: grid, playerData:{ ...previousData.game.playerData, moneyPerSecond:updatedMoneyPerSecond } } });
             // console.log('New item added to grid and MPS updated!');
             return true;
@@ -154,19 +178,24 @@ const addItemBySessionId = async sessionID => {
 
 const moveItemForSessionId = async (sessionID, request) => {
     const targetUid = SESSION_ID_MAP.get(sessionID);
-    const { game:{ gridItems, modifiers:{moneyPerSecondDelta} } } = SESSIONS.get(targetUid);
+    const { game:{ gridItems, } } = SESSIONS.get(targetUid);
 
     try{
         const { result, grid } = moveItems(gridItems, request);
         debugger
         if(result === true){
             const previousData = SESSIONS.get(targetUid);
-            console.log('previous data spread: ', {...previousData});
-            let testData = {...previousData, game:{ ...previousData.game, gridItems:grid }};
-            console.log('test data: ', testData);
-            console.log('Updating session: (move item)!');
-            const moneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
-            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid, playerData:{ ...previousData.game.playerData, moneyPerSecond } } });
+            // console.log('previous data spread: ', {...previousData});
+            // let testData = {...previousData, game:{ ...previousData.game, gridItems:grid }};
+            // console.log('test data: ', testData);
+            // console.log('Updating session: (move item)!');
+            //TODO
+            //Do you really need to recalc mps when MOVING an item?
+            //You can only move an item to an empty space, no mps changes should occur
+
+            // const moneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
+
+            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid } });
             //calc money per second?
             return { result:true, grid };
         }else{
@@ -181,17 +210,21 @@ const moveItemForSessionId = async (sessionID, request) => {
 
 const mergeItemsForSessionId = async (sessionID, request) => {
     const targetUid = SESSION_ID_MAP.get(sessionID);
-    const { game:{ gridItems, modifiers:{ moneyPerSecondDelta } } } = SESSIONS.get(targetUid);
-    console.log('merge request: ', request);
+    const { game:{ gridItems, modifiers:{ moneyPerSecondDelta }, playerData:{moneyPerSecond} } } = SESSIONS.get(targetUid);
+    // console.log('merge request: ', request);
     try{
-        const { result, grid } = mergeItems(gridItems, request);
+        const { result, grid, newItemId, removedItemId } = mergeItems(gridItems, request);
        
         if(result === true){
             const previousData = SESSIONS.get(targetUid);
             // console.log('testData: ', {...previousData, game:{ ...previousData.game, gridItems:grid } });
-            console.log('Updating session: (merge item)!'); 
-            const moneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
-            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid, playerData:{ ...previousData.game.playerData, moneyPerSecond } } });
+            // console.log('Updating session: (merge item)!'); 
+            // const moneyPerSecond = await calcMoneyPerSecond(grid, moneyPerSecondDelta);
+            const addItemMPS = getItemMoneyPerSecond(newItemId);
+            const removeItemMPS = getItemMoneyPerSecond(removedItemId);
+            const correctMPS = calcMergeMPS(moneyPerSecond, moneyPerSecondDelta, addItemMPS, removeItemMPS);
+            console.log('Got MPS from merge mps as: ', correctMPS);
+            SESSIONS.set(targetUid, { ...previousData, game:{ ...previousData.game, gridItems:grid, playerData:{ ...previousData.game.playerData, moneyPerSecond:correctMPS } } });
             debugger
             return { result:true, grid };
         }else{
@@ -209,7 +242,7 @@ const addSession = data => {
     const { uid } = data;
     const userHasSession = findSessionById(uid);
     if(!userHasSession){
-        console.log('Updating session: (add session)!');
+        // console.log('Updating session: (add session)!');
         SESSIONS.set(uid, { ...data, lastUpdate:moment.utc(), lastItem:null });
         const { sessionID } = data;
         SESSION_ID_MAP.set(sessionID, uid);

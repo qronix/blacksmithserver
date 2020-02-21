@@ -112,7 +112,7 @@ const updateProfile = async profile => {
 }
 
 const pushProfileUpdate = (uid, changes) => {
-    console.log('Applying profile changes: ', changes);
+    // console.log('Applying profile changes: ', changes);
     return new Promise(async (res, rej) => {
         try{
             await User.updateOne({uid}, {...changes});

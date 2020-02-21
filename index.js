@@ -35,6 +35,9 @@ const {
     moveItemForSessionId,
 } = require('./session/sessions');
 
+const { 
+    getItemValues,
+} = require('./utils/serverUtils');
 
 //parse application/x-www-form-urlendcoded
 app.use(bodyParser.urlencoded({ extended:false }));
@@ -139,7 +142,7 @@ app.post('/verifytoken', async(req, res) => {
 });
 
 io.on('connection', ( socket ) => {
-    console.log('We have a connection!');
+    console.log('We have a connection!'); 
     console.log('Getting client identification');
 
     socket.emit('identify');
@@ -177,6 +180,7 @@ io.on('connection', ( socket ) => {
         const validRequest = updateMoneyBySessionId(sessionID, money);
         if(!validRequest){
             console.log('Not a valid request!');
+            socket.emit('PAUSE');
         }
     });
 
@@ -225,7 +229,13 @@ io.on('connection', ( socket ) => {
 });
 
 
-http.listen(3001, () => {
+http.listen(3001, async () => {
+    console.log('Getting item values.....');
+    try{
+        await getItemValues();
+    }catch(err){
+        console.log('Get item values error: ', err.message);
+    }
     console.log('Blacksmith server listening on port 3001');
     // try{
     //     console.log('Installing items model');

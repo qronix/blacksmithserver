@@ -64,7 +64,7 @@ const moveItems = (grid, request) => {
                 grid[source.row][source.col] = 0;
                 grid[target.row][target.col] = sourceItemId;
 
-                console.log('Item was moved!');
+                // console.log('Item was moved!');
                 return { result:true, grid };
             }
         }else{
@@ -90,23 +90,25 @@ const mergeItems = (grid, request) => {
 
         //items match and can be merged
         if(sourceId === targetId){
+            const removedItemId = sourceId;
             grid[source.row][source.col] = 0;
             //TODO:
             //change to variable instead of hardcoded value
             if(targetId + 1 <= 139){
-                grid[target.row][target.col] = targetId + 1;
-                return { result:true, grid };
+                const newItemId = targetId + 1;
+                grid[target.row][target.col] = newItemId;
+                return { result:true, grid, newItemId, removedItemId};
             }else{
                 console.log('Item is a max item, cannot merge');
-                return { result:false, grid };
+                return { result:false, grid, newItemId:null, removedItemId:null };
             }
         }else{
             //add status
-            return { result:false, grid };
+            return { result:false, grid, newItemId:null, removedItemId:null};
         }
     }catch(err){
         console.log('Merge items error: ', err.message);
-        return { result:false, grid };
+        return { result:false, grid, newItemId:null, removedItemId:null};
     }
 }
 
@@ -139,6 +141,29 @@ const calcMoneyPerSecond = async (grid, modifier = 1) => {
     debugger
     const totalMPS = mps * modifier;
     console.log(`Calculated total MPS as ${totalMPS}`);
+    return totalMPS;
+}
+
+const getItemMoneyPerSecond = itemID => {
+    let value = ITEM_VALUES.get(itemID);
+    return value;
+}
+
+
+const calcMergeMPS = (currentMPS, mpsModifier, addItemMPS, removeItemMPS) => {
+    const baseMPS = (currentMPS / mpsModifier);
+    const mpsLessMergedItem = (baseMPS - (removeItemMPS * 2));
+    const correctBaseMPS = ( mpsLessMergedItem + addItemMPS);
+    const totalMPS = (correctBaseMPS * mpsModifier);
+
+    return totalMPS;
+}
+
+const calcAddItemMPS = (currentMPS, mpsModifier, addItemMPS) => {
+    const baseMPS = (currentMPS / mpsModifier);
+    const correctBaseMPS = (baseMPS + addItemMPS);
+    const totalMPS = (correctBaseMPS * mpsModifier);
+
     return totalMPS;
 }
 
@@ -209,9 +234,6 @@ const flattenArray = array => {
     return flatArray;
 }
 
-const getItemMoneyPerSecond = itemID => {
-
-}
 
 module.exports = {
     getEmptySpaceCount,
@@ -222,4 +244,7 @@ module.exports = {
     convertCoordsToFlatIndex,
     moveItems,
     mergeItems,
+    getItemMoneyPerSecond,
+    calcMergeMPS,
+    calcAddItemMPS,
 }
