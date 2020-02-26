@@ -37,41 +37,41 @@ const installEffectDocument = async () => {
 }
 
 const addNewItem = itemData => {
-    const item = new Item({ ...itemData });
     return new Promise(async (res, rej) => {
         try{
+            const item = new Item({ ...itemData });
             await item.save();
             res(true);
             
         }catch(err){
-            console.log('Add item error: ', err.message);
+            console.error('Add item error: ', err.message);
             rej(false);
         }
     });
 }
 
 const addNewEffect = effectData => {
-    const effect = new Effect({ ...effectData });
     return new Promise(async (res, rej) => {
         try{
+            const effect = new Effect({ ...effectData });
             await effect.save();
             res(true);
         }catch(err){
-            console.log('Add effect error: ', err.message);
+            console.error('Add effect error: ', err.message);
             rej(false);
         }
     });
 }
 
 const addNewUpgrade = upgradeData => {
-    const upgrade = new Upgrade({ ...upgradeData });
     return new Promise(async (res, rej) => {
         try{
+            const upgrade = new Upgrade({ ...upgradeData });
             await upgrade.save();
             res(true);
             
         }catch(err){
-            console.log('Add upgrade error: ', err.message);
+            console.error('Add upgrade error: ', err.message);
             rej(false);
         }
     });

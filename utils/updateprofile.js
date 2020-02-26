@@ -6,11 +6,7 @@ const { getItemInfoById } = require('../db/utils');
 
 const updateProfile = async profile => {
     try{
-        // console.log('PROFILE: ', profile);
-        // console.log('PROFILE PARSED: ', JSON.parse(profile));
-        debugger
         const { lastLogin, firstLogin, uid, game:{ playerData, modifiers }, game } = JSON.parse(profile);
-        // console.log('GAME: ', game);
         if(firstLogin){
             return pushProfileUpdate(uid, { firstLogin: false });
         }
@@ -20,12 +16,9 @@ const updateProfile = async profile => {
         const CURRENT_TIME = moment.utc();
         //get the difference between the utc times in seconds
         const SECONDS_SINCE_LAST_LOGIN = CURRENT_TIME.diff(LAST_LOGIN_MOMENT, 'seconds');
-        // console.log('Seconds since last login: ', SECONDS_SINCE_LAST_LOGIN);
-        
     
         //profile update logic:
         //update player money
-        //profile.game.playerData.moneyPerSecond * SECONDS_SINCE_LAST_LOGIN * profile.game.modifiers.moneyPerSecondDelta
         const { money } = playerData;
         const { forgeSpeed, moneyPerSecondDelta, spawnLevel } = modifiers;
         const { gridItems, currentForgeProgress } = game;
@@ -35,8 +28,6 @@ const updateProfile = async profile => {
         //board has space?
         const emptySpaceCount = getEmptySpaceCount(gridItems);
         if( emptySpaceCount > 0){
-            // let progress = currentForgeProgress;
-            // const progressDelta = forgeSpeed;
             //what about modifiers?
 
             //calcs the amount the forge should progress since last login
@@ -47,33 +38,13 @@ const updateProfile = async profile => {
             console.log("Seconds since last login: ", SECONDS_SINCE_LAST_LOGIN);
             console.log("\x1b[33m%s\x1b[0m",`Items to generate: ${ITEMS_TO_GENERATE}`);
 
-            for(i=0; i<ITEMS_TO_GENERATE; i++){
+            for(let i=0; i<ITEMS_TO_GENERATE; i++){
                 const {result, grid} = addItemToGrid(updatedItems, spawnLevel);
                 updatedItems = grid;
                 if(result === false){
                     break;
                 }
             }
-
-            // //add condition for TIMES_FORGE_SHOULD_PROGRESS === 100
-            // if(TIMES_FORGE_SHOULD_PROGRESS < 100){
-            // //use this to update forgeProgress
-
-            // }else{
-            //     // for(let i = 0; i < TIMES_FORGE_SHOULD_PROGRESS; i++){
-            //     //     //addItemToGrid will return true if an item could be added
-            //     //     //otherwise, it will return false, this will cause
-            //     //     //the loop to break
-            //     //     if((i%100) === 0){
-            //     //         const { result, grid } = addItemToGrid(updatedItems, spawnLevel);
-            //     //         updatedItems = grid;
-            //     //         if(!result === true){
-            //     //             break;
-            //     //         }
-            //     //     }
-            //     //     // console.log('Updated items: ', grid);
-            //     // }
-            // }
         }
     
         //At current tick rate of 50ms, the forge progress bar can 
@@ -85,12 +56,7 @@ const updateProfile = async profile => {
         //however to avoid complexity, I am going to use this method
         const updatedForgeProgress = (SECONDS_SINCE_LAST_LOGIN % 5) * 20;
         const moneyPerSecond = await calcMoneyPerSecond(updatedItems, moneyPerSecondDelta);
-        // const updatedMoney = (((money * moneyPerSecond) * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN);
         const updatedMoney = (money + ((moneyPerSecond * moneyPerSecondDelta) * SECONDS_SINCE_LAST_LOGIN));
-    
-        //calc new money per second
-        // const { moneyPerSecond:addedItemMPS } = await getItemInfoById(spawnLevel);
-        // const updatedMoneyPerSecond = (moneyPerSecond + (addedItemMPS * addedItemsCount));
         
         const updatedProfile = {
             game:{
@@ -107,18 +73,17 @@ const updateProfile = async profile => {
         return pushProfileUpdate(uid, updatedProfile);
     }
     catch(err){
-        console.log('Profile update error: ', err.message);
+        console.error('Profile update error: ', err.message);
     }
 }
 
 const pushProfileUpdate = (uid, changes) => {
-    // console.log('Applying profile changes: ', changes);
     return new Promise(async (res, rej) => {
         try{
             await User.updateOne({uid}, {...changes});
             res(changes);
         }catch(err){
-            console.log('Profile update error: ', err.message);
+            console.error('Profile update error: ', err.message);
             rej(new Error('Could not update profile'));
         }
     });

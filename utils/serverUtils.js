@@ -11,7 +11,7 @@ const getItemValues = async () => {
             ITEM_VALUES.set(itemID, moneyPerSecond);
         }
     }catch(err){
-        console.log('Get item values error: ', err.message);
+        console.error('Get item values error: ', err.message);
     }
 }
 

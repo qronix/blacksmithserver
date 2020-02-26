@@ -33,6 +33,7 @@ const {
     addItemBySessionId,
     mergeItemsForSessionId,
     moveItemForSessionId,
+    getMoneyBySessionId,
 } = require('./session/sessions');
 
 const { 
@@ -104,7 +105,7 @@ app.post('/login', async(req, res) => {
             res.status(200).send({message: 'Login Successful', content: { sessionID, token }});
         }
     }catch(err){
-        console.log('Login error: ', err.message);
+        console.error('Login error: ', err.message);
         res.status(400).send('Login failed');
     }
 });
@@ -116,7 +117,7 @@ app.post('/logout', async (req, res) => {
         endNetworkSessionBySessionId(sessionID);
         return res.status(200).send('Logged out.');
     }catch(err){
-        console.log('Logout error: ', err.message);
+        console.error('Logout error: ', err.message);
     }
 });
 
@@ -126,7 +127,6 @@ app.post('/verifytoken', async(req, res) => {
         const response = await admin.auth().verifyIdToken(TOKEN);
         if(response.uid){
             const userProfile = await User.find({ uid:response.uid });
-            // console.log('Got profile: ', userProfile);
             User.updateOne({ uid:response.uid },{ lastLogin:moment.utc().valueOf() });
             const { uid } = userProfile[0];
             if(uid){
@@ -136,7 +136,7 @@ app.post('/verifytoken', async(req, res) => {
             }
         }
     }catch(err){
-        console.log('ERROR: ', err.message);
+        console.error('ERROR: ', err.message);
         return res.status(400).send('Could not verify token.');
     }
 });
@@ -148,24 +148,18 @@ io.on('connection', ( socket ) => {
     socket.emit('identify');
 
     socket.on('identity', (data) => {
-        // console.log('Got identity: ', data);
         const { sessionID, token } = JSON.parse(data);
         const sessionData = { sessionID, token, socketID:socket.id };
         const isValidClientSession = findSessionBySessionId(sessionID);
         if(isValidClientSession){
             const networkSessionExists = doesNetworkSessionExist(sessionID);
-            // console.log('SOCKET ID: ', socket.id);
-            // console.log('Does network session exist: ', networkSessionExists);
             if(networkSessionExists){
                 console.log(`A duplicate session for ID: ${ sessionID } was prevented`);
                 socket.disconnect(true);
             }else{
                 addNetworkSession(sessionData, socket);
                 const gameData = JSON.stringify(getGameDataBySocketId(socket.id));
-                // console.log('Sending game data to client');
                 socket.emit('initialize', gameData);
-                // console.log('Adding network session');
-                //TODO: Add duplicate session error emit
                 socket.emit('Authorized', "Your connection has been authorized");
             }
         }else{
@@ -174,24 +168,35 @@ io.on('connection', ( socket ) => {
         }
     });
 
-    socket.on('updateMoney', msg => {
-        const money = Number.parseInt(msg);
-        const sessionID = getSessionIdFromSocketId(socket.id);
-        const validRequest = updateMoneyBySessionId(sessionID, money);
-        if(!validRequest){
-            console.log('Not a valid request!');
-            socket.emit('PAUSE');
-        }
-    });
+    // socket.on('updateMoney', msg => {
+    //     const money = Number.parseInt(msg);
+    //     const sessionID = getSessionIdFromSocketId(socket.id);
+    //     const validRequest = updateMoneyBySessionId(sessionID, money);
+    //     if(!validRequest){
+    //         console.log('Not a valid request!');
+    //         socket.emit('PAUSE');
+    //     }
+    // });
 
+    socket.on('reqMoneyUpdate', msg => {
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        const moneyData = getMoneyBySessionId(sessionID);
+        const socketData = JSON.stringify(moneyData);
+        console.log('Sending client money as: ', moneyData);
+        socket.emit('clientMoneyUpdate', socketData);
+    });
+    
     socket.on('addItem', msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const result = addItemBySessionId(sessionID);
+        const {result, grid} = addItemBySessionId(sessionID);
         if(result === false){
             removeSessionBySessionId(sessionID);
             removeSession(socket.id);
+        }else{
+            socket.emit('gridUpdate', JSON.stringify(grid));
+            const moneyData = getMoneyBySessionId(sessionID);
+            socket.emit('clientMoneyUpdate', JSON.stringify(moneyData));
         }
-        // console.log('Add item result was: ', result);
     });
 
     socket.on('moveItem', async msg => {
@@ -212,7 +217,11 @@ io.on('connection', ( socket ) => {
             removeSessionBySessionId(sessionID);
             removeSession(socket.id);
         }else{
+            console.log('Sending grid as: ', grid);
             socket.emit('gridUpdate', JSON.stringify(grid));
+            const moneyData = getMoneyBySessionId(sessionID);
+            const socketData = JSON.stringify(moneyData);
+            socket.emit('clientMoneyUpdate', socketData);
         }
     });
 
@@ -223,7 +232,7 @@ io.on('connection', ( socket ) => {
             const clearSessionResult = removeSession(socket.id);
             (clearSessionResult) ? console.log('Session removed') : console.log('Session not found');
         }catch(err){
-            console.log('Could not remove session by socket id: ', socket.id);
+            console.error('Could not remove session by socket id: ', socket.id);
         }
     });
 });
@@ -234,7 +243,7 @@ http.listen(3001, async () => {
     try{
         await getItemValues();
     }catch(err){
-        console.log('Get item values error: ', err.message);
+        console.error('Get item values error: ', err.message);
     }
     console.log('Blacksmith server listening on port 3001');
     // try{
