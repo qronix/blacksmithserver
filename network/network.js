@@ -50,12 +50,14 @@ const addNetworkSession = (data, socket) => {
 }
 
 //rename to endSessionBySocketId
-const removeSession = socketID => {
+const removeNetworkSession = socketID => {
     try{
         const sessionID  = SESSION_SOCKET_MAP.get(socketID);
         if(sessionID){
             NETWORK_SESSIONS.delete(sessionID);
-            let {socket} = SESSION_SOCKET_MAP.get(socketID);
+            // let {socket} = SESSION_SOCKET_MAP.get(socketID);
+            let socket = getSocketFromSessionId(sessionID);
+            //fix this, socket is undefined
             socket.disconnect();
             SESSION_SOCKET_MAP.delete(socketID);
             return true;
@@ -64,7 +66,7 @@ const removeSession = socketID => {
             return false;
         }
     }catch(err){
-        console.error('Could not remove network or client session: ', err.message);
+        console.error('Could not remove network session: ', err.message);
         return false;
     }
 }
@@ -75,8 +77,10 @@ const getSocketFromSessionId = sessionID => {
         CURRENT_SOCKETS.forEach(item => {
             if(item.sessionID === sessionID){
                 socket = item.socket;
+                console.log('FOUND THE SOCKET FOR SESSIONID: ', sessionID);
             }
         });
+        // console.log('Found socket in current sockets: ', socket);
         return socket;
     }catch(err){
         console.error('Get socket from session id error: ', err.message);
@@ -139,7 +143,7 @@ const validateIdentity = (socketID, token) => {
 module.exports = {
     doesNetworkSessionExist,
     addNetworkSession,
-    removeSession,
+    removeNetworkSession,
     getSessionIdFromSocketId,
     getGameDataBySocketId,
     validateIdentity,

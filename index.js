@@ -17,7 +17,7 @@ const {
 const {
     doesNetworkSessionExist,
     addNetworkSession,
-    removeSession,
+    removeNetworkSession,
     getSessionInfo,
     getSessionIdFromSocketId,
     getGameDataBySocketId,
@@ -180,56 +180,74 @@ io.on('connection', ( socket ) => {
 
     socket.on('reqMoneyUpdate', msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const moneyData = getMoneyBySessionId(sessionID);
-        const socketData = JSON.stringify(moneyData);
-        console.log('Sending client money as: ', moneyData);
-        socket.emit('clientMoneyUpdate', socketData);
+        if(sessionID){
+            console.log('SessionID: ', sessionID);
+            const moneyData = getMoneyBySessionId(sessionID);
+            const socketData = JSON.stringify(moneyData);
+            console.log('Sending client money as: ', moneyData);
+            socket.emit('clientMoneyUpdate', socketData);
+        }else{
+            socket.disconnect(true);
+        }
     });
     
     socket.on('addItem', msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const {result, grid} = addItemBySessionId(sessionID);
-        if(result === false){
-            removeSessionBySessionId(sessionID);
-            removeSession(socket.id);
+        if(sessionID){
+            const { result, grid } = addItemBySessionId(sessionID);
+            if(result === false){
+                removeSessionBySessionId(sessionID);
+                removeNetworkSession(socket.id);
+            }else{
+                socket.emit('gridUpdate', JSON.stringify(grid));
+                const moneyData = getMoneyBySessionId(sessionID);
+                socket.emit('clientMoneyUpdate', JSON.stringify(moneyData));
+            }
         }else{
-            socket.emit('gridUpdate', JSON.stringify(grid));
-            const moneyData = getMoneyBySessionId(sessionID);
-            socket.emit('clientMoneyUpdate', JSON.stringify(moneyData));
+            socket.disconnect();
         }
     });
 
     socket.on('moveItem', async msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const {result, grid} = await moveItemForSessionId(sessionID, JSON.parse(msg));
-        if(result === false){
-            removeSessionBySessionId(sessionID);
-            removeSession(socket.id);
+        if(sessionID){
+            const { result, grid } = await moveItemForSessionId(sessionID, JSON.parse(msg));
+            if(result === false){
+                removeSessionBySessionId(sessionID);
+                removeNetworkSession(socket.id);
+            }else{
+                socket.emit('gridUpdate', JSON.stringify(grid));
+            }
         }else{
-            socket.emit('gridUpdate', JSON.stringify(grid));
+            socket.disconnect();
         }
     });
 
     socket.on('mergeItems', async msg => {
         const sessionID = getSessionIdFromSocketId(socket.id);
-        const {result, grid} = await mergeItemsForSessionId(sessionID, JSON.parse(msg));
-        if(result === false){
-            removeSessionBySessionId(sessionID);
-            removeSession(socket.id);
+        if(sessionID){
+            const { result, grid } = await mergeItemsForSessionId(sessionID, JSON.parse(msg));
+            if(result === false){
+                removeSessionBySessionId(sessionID);
+                removeNetworkSession(socket.id);
+            }else{
+                console.log('Sending grid as: ', grid);
+                socket.emit('gridUpdate', JSON.stringify(grid));
+                const moneyData = getMoneyBySessionId(sessionID);
+                const socketData = JSON.stringify(moneyData);
+                socket.emit('clientMoneyUpdate', socketData);
+            }
         }else{
-            console.log('Sending grid as: ', grid);
-            socket.emit('gridUpdate', JSON.stringify(grid));
-            const moneyData = getMoneyBySessionId(sessionID);
-            const socketData = JSON.stringify(moneyData);
-            socket.emit('clientMoneyUpdate', socketData);
+            socket.disconnect();
         }
     });
 
     socket.on('disconnect', () => {
+        //is try/catch necessary here?
         try{
             console.log('Client disconnected, removing session....');
             //clarify this is a NETWORK session being removed
-            const clearSessionResult = removeSession(socket.id);
+            const clearSessionResult = removeNetworkSession(socket.id);
             (clearSessionResult) ? console.log('Session removed') : console.log('Session not found');
         }catch(err){
             console.error('Could not remove session by socket id: ', socket.id);

@@ -221,6 +221,7 @@ const addSession = data => {
     
 }
 
+//WHAT DOES THIS DO??
 const clearSessionById = uid => {
     try{
         return SESSIONS.delete(uid);
@@ -234,6 +235,7 @@ const removeSessionBySessionId = async sessionId => {
         const targetUid = SESSION_ID_MAP.get(sessionId);
         await saveSessionBySessionId(sessionId);
         SESSIONS.delete(targetUid);
+        SESSION_ID_MAP.delete(sessionId);
         return true;
     }catch(err){
         console.error('Could not delete user session by id: ', err.message);
