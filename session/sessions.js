@@ -13,6 +13,7 @@ const {
     getItemMoneyPerSecond,
     calcMergeMPS,
     calcAddItemMPS,
+    purchaseUpgrade,
 } = require('../utils/gameUtils');
 
 const { PRIVATE_KEY } = require('./privateKey');
@@ -40,8 +41,12 @@ const getSessionDataBySessionId = id => {
     try{
         const targetUid = SESSION_ID_MAP.get(id);
         //TODO: send modifiers and upgrades
+        console.log('UID: ', targetUid);
         const { game }  = SESSIONS.get(targetUid);
+        // console.log('getSessionData SESSIONS: ');
+        // console.dir(SESSIONS);
         if(game){
+            // console.log(`Get session data GAME DATA: ${JSON.stringify(game)}`);
             return game;
         }else{
             throw new Error(`Could not find game session for id: ${targetUid}`)
@@ -208,6 +213,7 @@ const addSession = data => {
         const userHasSession = findSessionById(uid);
         if(!userHasSession){
             SESSIONS.set(uid, { ...data, lastUpdate:moment.utc(), lastItem:null });
+            // console.log(`%c Adding session! DATA: ${JSON.stringify(data)}`,'color:#7FFF00');
             const { sessionID } = data;
             SESSION_ID_MAP.set(sessionID, uid);
             return true;
@@ -255,9 +261,61 @@ const getMoneyBySessionId = sessionID => {
     }
 }
 
+const purchaseUpgradeBySessionId = (sessionID, upgradeID) => {
+    const targetUid = SESSION_ID_MAP.get(sessionID);
+    const sessionData = SESSIONS.get(targetUid);
+    const {
+        game:{
+            upgrades,
+            playerData:{
+                money
+            },
+            modifiers,
+        }
+    } = sessionData;
+
+    // console.log('UpgradeID: ', upgradeID);
+    // console.log('Upgrade with id: ', upgrades[upgradeID]);
+    // console.log('Current player upgrades: ', upgrades);
+    // console.log('Modifiers from sessionData(purchaseUpgrade): ', modifiers);
+    const { rank } = upgrades[upgradeID];
+
+    const { status, msg, data } = purchaseUpgrade(upgradeID, money, rank, modifiers);
+
+    if(status === true){
+        const { playerMoney:money, rank, modifiers} = data;
+        // console.log('Modifiers from purchaseUpgrade: ', modifiers);
+        // console.log('Previous upgrades: ', upgrades);
+        const previousUpgradeData = upgrades[upgradeID];
+        upgrades[upgradeID] = { ...previousUpgradeData, rank, active:true };
+        // console.log('Upgrades changed to: ', upgrades);
+        // const currentSessionData = SESSIONS.get(targetUid);
+        SESSIONS.set(targetUid, { 
+            ...sessionData, 
+            game:{
+                ...sessionData.game, 
+                playerData:{
+                    ...sessionData.game.playerData, 
+                    money,
+                },
+                modifiers,
+                upgrades,
+            } 
+        });
+
+        return { status, statusMsg:msg };
+    }else{
+        //upgrade purchase failed
+        //return the false status for failure
+        //and message to send to client
+        return { status, statusMsg:msg };
+    }
+}
+
 const saveSessionBySessionId = async sessionID => {
     try{
         const targetUid = SESSION_ID_MAP.get(sessionID);
+        //check for invalid session
         const sessionData = SESSIONS.get(targetUid);
         const lastLogin = moment.utc().valueOf();
         const result = await User.updateOne({ uid:targetUid },  { ...sessionData, lastLogin });
@@ -304,4 +362,5 @@ module.exports = {
     mergeItemsForSessionId,
     moveItemForSessionId,
     getMoneyBySessionId,
+    purchaseUpgradeBySessionId
 }

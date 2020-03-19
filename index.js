@@ -34,10 +34,14 @@ const {
     mergeItemsForSessionId,
     moveItemForSessionId,
     getMoneyBySessionId,
+    purchaseUpgradeBySessionId,
+    getSessionDataBySessionId,
 } = require('./session/sessions');
 
 const { 
     getItemValues,
+    getUpgradeValues,
+    getEffectValues,
 } = require('./utils/serverUtils');
 
 //parse application/x-www-form-urlendcoded
@@ -242,6 +246,34 @@ io.on('connection', ( socket ) => {
         }
     });
 
+    socket.on('buyUpgrade', msg => {
+        // socket.emit('clientUpgrades', `You want to buy upgrade: ${msg}`);
+        const sessionID = getSessionIdFromSocketId(socket.id);
+        let { upgradeID } = JSON.parse(msg);
+        upgradeID = Number.parseInt(upgradeID);
+        const { status, statusMsg, } = purchaseUpgradeBySessionId(sessionID, upgradeID);
+        // console.log('Session data: ', getSessionDataBySessionId(sessionID));
+        const {
+            modifiers, 
+            upgrades 
+        } = getSessionDataBySessionId(sessionID);
+        
+        // socket.emit('clientUpgrades', upgrades);
+        // socket.emit('clientModifiers', modifiers);
+
+        const moneyData = getMoneyBySessionId(sessionID);
+        socket.emit('clientMoneyUpdate', JSON.stringify(moneyData));
+
+        //clean this up
+        if(status === false){
+            socket.emit('clientMsg', statusMsg);
+        }else{
+            socket.emit('clientMsg', statusMsg);
+            socket.emit('clientUpgrades', JSON.stringify(upgrades));
+            socket.emit('clientModifiers', JSON.stringify(modifiers));
+        }
+    });
+
     socket.on('disconnect', () => {
         //is try/catch necessary here?
         try{
@@ -257,9 +289,31 @@ io.on('connection', ( socket ) => {
 
 
 http.listen(3001, async () => {
-    console.log('Getting item values.....');
+    const serverInstall = false;
     try{
+        if(serverInstall == true){
+            try{
+                let result = '';
+                console.log('Installing items model.....');
+                result = await installItemDocument();
+                console.log(result);
+                console.log('Installing upgrades model.....');
+                result = await installUpgradeDocument();
+                console.log(result);
+                console.log('Installing effects model.....');
+                result = await installEffectDocument();
+                console.log(result);
+            }catch(err){
+                console.error('An error occured during server installation: ', err.message);
+            }
+        }
+        console.log('Getting item values.....');
         await getItemValues();
+        console.log('Getting upgrade values.....');
+        await getUpgradeValues();
+        console.log('Getting effect values.....');
+        await getEffectValues();
+        
     }catch(err){
         console.error('Get item values error: ', err.message);
     }

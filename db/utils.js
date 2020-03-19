@@ -6,34 +6,43 @@ const ITEMS = require('./defaultDocuments/item-data.json');
 const UPGRADES = require('./defaultDocuments/upgrade-data.json');
 const EFFECTS = require('./defaultDocuments/effect-data.json');
 
-const installItemDocument = async () => {
-    for(let i=0; i<ITEMS.length; i++){
-        try{
-            await addNewItem(ITEMS[i]);
-        }catch(err){
-            break;
+const installItemDocument = () => {
+    return new Promise(async (res,rej)=>{
+        for(let i=0; i < ITEMS.length; i++){
+            try{
+                await addNewItem(ITEMS[i]);
+            }catch(err){
+                rej('Install item document error: ', err.message);
+            }
         }
-    }
+        res('Install item document successful');
+    });
 }
 
-const installUpgradeDocument = async () => {
-    for(let i=0; i<UPGRADES.length; i++){
-        try{
-            await addNewUpgrade(UPGRADES[i]);
-        }catch(err){
-            break;
+const installUpgradeDocument = () => {
+    return new Promise(async (res, rej)=>{
+        for(let i=0; i < UPGRADES.length; i++){
+            try{
+                await addNewUpgrade(UPGRADES[i]);
+            }catch(err){
+                rej('Install upgrade document error: ', err.message);
+            }
         }
-    }
+        res('Install upgrade document successful');
+    });
 }
 
-const installEffectDocument = async () => {
-    for(let i=0; i<EFFECTS.length; i++){
-        try{
-            await addNewEffect(EFFECTS[i]);
-        }catch(err){
-            break;
+const installEffectDocument = () => {
+    return new Promise(async (res,rej)=>{
+        for(let i=0; i < EFFECTS.length; i++){
+            try{
+                await addNewEffect(EFFECTS[i]);
+            }catch(err){
+                rej('Install effect document error: ', err.message);
+            }
         }
-    }
+        res('Install effect document successful');
+    });
 }
 
 const addNewItem = itemData => {
@@ -42,7 +51,6 @@ const addNewItem = itemData => {
             const item = new Item({ ...itemData });
             await item.save();
             res(true);
-            
         }catch(err){
             console.error('Add item error: ', err.message);
             rej(false);
@@ -69,7 +77,6 @@ const addNewUpgrade = upgradeData => {
             const upgrade = new Upgrade({ ...upgradeData });
             await upgrade.save();
             res(true);
-            
         }catch(err){
             console.error('Add upgrade error: ', err.message);
             rej(false);

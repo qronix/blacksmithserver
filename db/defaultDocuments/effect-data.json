@@ -4,20 +4,23 @@
         "modifier":{
             "type":"spawnLevel",
             "increase":1
-        }
+        },
+        "effectID":0
     },
     {
         "name": "Forge Speed",
         "modifier":{
             "type":"forgeSpeed",
             "increase":0.3
-        }
+        },
+        "effectID":1
     },
     {
         "name": "Auto Merge",
         "modifier":{
             "type":"autoMerge",
             "increase":1
-        }
+        },
+        "effectID":2
     }
 ]

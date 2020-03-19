@@ -7,7 +7,8 @@
         "cost":10000,
         "costDelta":5,
         "effects":[0],
-        "icon":"/imgs/dag_01.png"
+        "icon":"/imgs/dag_01.png",
+        "upgradeID":0
     },
     {
         "name": "Forge Speed",
@@ -17,7 +18,8 @@
         "cost":500000,
         "costDelta":4,
         "effects":[1],
-        "icon":"/imgs/hm_t_02.png"
+        "icon":"/imgs/hm_t_02.png",
+        "upgradeID":1
     },
     {
         "name": "Golden Anvil",
@@ -27,6 +29,7 @@
         "cost":10000000,
         "costDelta":5,
         "effects":[2],
-        "icon":"/imgs/bl_t_01.png"
+        "icon":"/imgs/bl_t_01.png",
+        "upgradeID":2
     }
 ]

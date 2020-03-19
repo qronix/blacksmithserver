@@ -1,6 +1,7 @@
 const { Item } = require('../db/items.model');
 const { ITEM_VALUES } = require('../utils/serverUtils');
-
+const { UPGRADE_VALUES } = require('../utils/serverUtils');
+const { EFFECT_VALUES } = require('../utils/serverUtils');
 
 // const getNonEmptySpaces = (grid, alreadyFlat = false) => {
 //     let flatGrid = grid;
@@ -25,7 +26,7 @@ const getEmptySpaceCount = (grid, alreadyFlat = false) => {
     }
 }
 
-const gridHasSpace = (grid, alreadyFlat=false) => {
+const gridHasSpace = (grid, alreadyFlat = false) => {
     try{
         let flatGrid = grid;
         if(!alreadyFlat){
@@ -38,7 +39,7 @@ const gridHasSpace = (grid, alreadyFlat=false) => {
     }
 }
 
-const getIndexOfFirstFree = (grid, alreadyFlat=false) => {
+const getIndexOfFirstFree = (grid, alreadyFlat = false) => {
     try{
         let flatGrid = grid;
         if(!alreadyFlat){
@@ -49,6 +50,54 @@ const getIndexOfFirstFree = (grid, alreadyFlat=false) => {
         console.error('Get index of first free error: ', err.message);
         return null;
     }
+}
+
+const purchaseUpgrade = (id, playerMoney, currentRank, currentMods) => {
+    const { effects, cost, maxRank, costDelta } = UPGRADE_VALUES.get(id);
+    if(currentRank < maxRank){
+        let totalCost;
+        if(currentRank === 0){
+            totalCost = cost;
+        }else{
+            totalCost = (cost * costDelta * currentRank);
+        }
+        console.log('Player money: ', playerMoney);
+        console.log('Upgrade cost: ', totalCost);
+        if(playerMoney >= totalCost){
+            let updatedMods;
+            for(effect in effects){
+                updatedMods = updateModifiersWithEffectModifiers(currentMods, effects[effect]);
+            }
+            const upgradeData = {
+                modifiers: updatedMods,
+                rank:(currentRank + 1),
+                playerMoney:(playerMoney - totalCost),
+            };
+            console.log('PlayerMoney after upgrade: ', playerMoney);
+            return { status:true, msg:"Upgrade unlocked!", data:upgradeData  };
+        }else{
+            return { status:false, msg:"Not enough money for upgrade", }
+        }
+    }else{
+        return { status:false, msg:"Already at max rank", };
+    }
+}
+
+const updateModifiersWithEffectModifiers = (currentMods, effectID) => {
+    console.log('Effect is: ', EFFECT_VALUES.get(effectID));
+
+    const { 
+        type,
+        increase, 
+        } = EFFECT_VALUES.get(effectID);
+
+    for(mod in currentMods){
+        if(mod === type){
+            currentMods[mod] += increase
+        }
+    }
+
+    return currentMods;
 }
 
 const addItemToGrid = (grid, item) => {
@@ -285,4 +334,5 @@ module.exports = {
     getItemMoneyPerSecond,
     calcMergeMPS,
     calcAddItemMPS,
+    purchaseUpgrade,
 }
