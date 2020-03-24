@@ -52,15 +52,24 @@ const getIndexOfFirstFree = (grid, alreadyFlat = false) => {
     }
 }
 
+//upgrade cost function:
+// y = (100^(current rank / 2) * (upgrade base cost * cost delta))
+//Example:
+//If an upgrade base cost is 10000 with a current rank of 0
+//and a cost delta of 5. Then the cost for the first rank (1)
+//would be:
+// y = (100^(0/2) * (10000 * 5)) -> 50,000
+// and rank 2 would be"
+// y = (100^(1/2) * (10000 * 5)) -> 500,000
 const purchaseUpgrade = (id, playerMoney, currentRank, currentMods) => {
     const { effects, cost, maxRank, costDelta } = UPGRADE_VALUES.get(id);
     if(currentRank < maxRank){
-        let totalCost;
-        if(currentRank === 0){
-            totalCost = cost;
-        }else{
-            totalCost = (cost * costDelta * currentRank);
-        }
+        const totalCost = (100 ** (currentRank / 2) * (cost * costDelta));
+        // if(currentRank === 0){
+        //     totalCost = cost;
+        // }else{
+        //     totalCost = (cost * costDelta * currentRank);
+        // }
         console.log('Player money: ', playerMoney);
         console.log('Upgrade cost: ', totalCost);
         if(playerMoney >= totalCost){
