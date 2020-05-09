@@ -30,9 +30,13 @@ const getUpgradeValues = async () => {
                 effects, 
                 cost, 
                 maxRank, 
-                costDelta } = upgrade;
+                costDelta,
+                icon,
+                description,
+                name,
+             } = upgrade;
                 // console.log('Upgrade id: ', upgradeID);
-                UPGRADE_VALUES.set(upgradeID, {effects, cost, maxRank, costDelta});
+                UPGRADE_VALUES.set(upgradeID, {effects, cost, maxRank, costDelta, icon, description, name});
         }
         return console.log(`Got ${ UPGRADE_VALUES.size } upgrades from DB`);
     }catch(err){

@@ -1,3 +1,5 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
@@ -8,6 +10,10 @@ const { User } = require('./db/user.model');
 const { updateProfile }  = require('./utils/updateProfile');
 const moment  = require('moment');
 
+
+
+console.log('Process env vars: ');
+console.log(process.env);
 const { 
     installItemDocument,
     installEffectDocument,
@@ -36,6 +42,7 @@ const {
     getMoneyBySessionId,
     purchaseUpgradeBySessionId,
     getSessionDataBySessionId,
+    getUpgradesBySessionId,
 } = require('./session/sessions');
 
 const { 
@@ -255,8 +262,9 @@ io.on('connection', ( socket ) => {
         // console.log('Session data: ', getSessionDataBySessionId(sessionID));
         const {
             modifiers, 
-            upgrades 
         } = getSessionDataBySessionId(sessionID);
+
+        const upgrades = getUpgradesBySessionId(sessionID);
         
         // socket.emit('clientUpgrades', upgrades);
         // socket.emit('clientModifiers', modifiers);

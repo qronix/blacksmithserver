@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/Blacksmith', { useNewUrlParser: true });
+console.log('OUR DB: ', process.env.MONGO_DB);
+const url = `mongodb://${process.env.MONGO_USERNAME}
+:${process.env.MONGO_PASSWORD}
+@${process.env.MONGO_HOSTNAME}
+:${process.env.MONGO_PORT}
+/${process.env.MONGO_DB}
+?authSource=admin`;
+mongoose.connect(url, { useNewUrlParser: true });
 
 
 const db = mongoose.connection;

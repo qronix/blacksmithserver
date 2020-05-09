@@ -82,7 +82,7 @@ const purchaseUpgrade = (id, playerMoney, currentRank, currentMods) => {
                 rank:(currentRank + 1),
                 playerMoney:(playerMoney - totalCost),
             };
-            console.log('PlayerMoney after upgrade: ', playerMoney);
+            console.log('PlayerMoney after upgrade: ', upgradeData.playerMoney);
             return { status:true, msg:"Upgrade unlocked!", data:upgradeData  };
         }else{
             return { status:false, msg:"Not enough money for upgrade", }
@@ -176,6 +176,11 @@ const mergeItems = (grid, request) => {
         console.error('Merge items error: ', err.message);
         return { result:false, grid, newItemId:null, removedItemId:null};
     }
+}
+
+const getUpgradeData = () => {
+    const upgradeData = new Map(UPGRADE_VALUES);
+    return upgradeData;
 }
 
 // const moneyPerSecondCalc = flatArray.reduce(async (acc,cur)=>{
@@ -344,4 +349,5 @@ module.exports = {
     calcMergeMPS,
     calcAddItemMPS,
     purchaseUpgrade,
+    getUpgradeData,
 }

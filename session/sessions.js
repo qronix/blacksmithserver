@@ -14,7 +14,10 @@ const {
     calcMergeMPS,
     calcAddItemMPS,
     purchaseUpgrade,
+    getUpgradeData,
 } = require('../utils/gameUtils');
+
+const { mergeMapAndArray } = require('../utils/utils');
 
 const { PRIVATE_KEY } = require('./privateKey');
 
@@ -55,6 +58,29 @@ const getSessionDataBySessionId = id => {
         console.error('Get session data by session id error: ', err.message);
         return null;
     }
+}
+
+const calcPlayerUpgradeCosts = ( playerUpgrades, baseUpgradeData ) => {
+    let upgradesWithC
+    for(let i=0; i<playerUpgrades.length; i++){
+        const {cost, costDelta} = baseUpgradeData.get(i);
+        let upgradeCost =  (100 ** (playerUpgrades[i].rank / 2) * (cost * costDelta));
+        console.log(`Upgrade cost for upgrade ${i} is: ${upgradeCost}`);
+
+    }
+}
+
+const getUpgradesBySessionId = id => {
+    const targetUid = SESSION_ID_MAP.get(id);
+    const {game:{upgrades}} = SESSIONS.get(targetUid);
+    const baseUpgradeData = getUpgradeData();
+    const upgradesWithCosts = calcPlayerUpgradeCosts(upgrades, baseUpgradeData);
+    // const upgradeDataPackage = mergeMapAndArray(baseUpgradeData, upgradesWithCosts);
+    // console.log('Sending upgrade package as: ');
+    // console.dir(upgradeDataPackage);
+    // const upgradeDataPackage = {icon, description, name, ...upgrades};
+
+    // return upgradeDataPackage;
 }
 
 const getBetweenUpdateAndNow = lastUpdate => {
@@ -276,12 +302,13 @@ const purchaseUpgradeBySessionId = (sessionID, upgradeID) => {
 
     // console.log('UpgradeID: ', upgradeID);
     // console.log('Upgrade with id: ', upgrades[upgradeID]);
-    // console.log('Current player upgrades: ', upgrades);
+    console.log('Current player upgrades: ', upgrades);
     // console.log('Modifiers from sessionData(purchaseUpgrade): ', modifiers);
     const { rank } = upgrades[upgradeID];
 
     const { status, msg, data } = purchaseUpgrade(upgradeID, money, rank, modifiers);
-
+    console.log('Data received from purchase upgrade');
+    console.dir(data);
     if(status === true){
         const { playerMoney:money, rank, modifiers} = data;
         // console.log('Modifiers from purchaseUpgrade: ', modifiers);
@@ -362,5 +389,6 @@ module.exports = {
     mergeItemsForSessionId,
     moveItemForSessionId,
     getMoneyBySessionId,
-    purchaseUpgradeBySessionId
+    purchaseUpgradeBySessionId,
+    getUpgradesBySessionId,
 }
